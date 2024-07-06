@@ -1,2 +1,2 @@
-# langchain_llama3
-langchain_llama3
+# paper_summarization
+paper_summarization
