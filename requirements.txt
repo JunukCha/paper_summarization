@@ -1,10 +1,9 @@
 langchain==0.2.1
 langchain-community==0.2.1
 langchain-core==0.2.11
-lanchain-text-splitters==0.2.0
+langchain-text-splitters==0.2.0
 langchainhub==0.1.16
 openai
 pypdf
 langchain_openai
 beautifulsoup4
-streamlit
