@@ -1,4 +1,4 @@
-langchain
+langchain==0.2.1
 openai
 pypdf
 langchain_openai
