@@ -1,85 +1,15 @@
 import os, os.path as osp
-import requests
 import pandas as pd
 import mimetypes
 import threading
-from urllib.request import urlretrieve
-from bs4 import BeautifulSoup
 import streamlit as st
-import time
 from langchain import hub
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import ChatMessage
-from langchain_core.runnables import RunnablePassthrough
-from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
-from langchain_community.chat_models import ChatOllama
-from langchain_community.chat_message_histories import ChatMessageHistory
+from langchain_openai import ChatOpenAI
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.history_aware_retriever import create_history_aware_retriever
 from langchain.chains.retrieval import create_retrieval_chain
-from lib.utils import print_messages, embed_file, format_docs, create_sources_string, stream_parser, retrieval_qa_chat_prompt, question_dictionary
-from dotenv import load_dotenv
-from docx.shared import Pt
-
-def extract_link(container, link_text, attribute='href'):
-    link_element = container.find('a', string=lambda text: text and link_text in text.lower())
-    if link_element:
-        return link_element[attribute] if attribute != 'text' else link_element.get_text(strip=True)
-    return 'Not available'
-
-def scrape_data(url):
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    papers = []
-    for entry in soup.find_all('dt', class_='ptitle'):
-        title = entry.text.strip()
-        authors_dirty = entry.find_next_sibling('dd').text.strip()
-        authors = ', '.join(author.strip() for author in authors_dirty.split('\n') if author.strip())
-        links_container = entry.find_next_sibling('dd').find_next_sibling('dd')
-        pdf_link = extract_link(links_container, 'pdf')
-        supp_link = extract_link(links_container, 'supp')
-        bibtex_info = links_container.find('div', class_='bibref').text if links_container.find('div', class_='bibref') else 'No BibTeX available'
-        papers.append({
-            'title': title,
-            'authors': authors,
-            'pdf_link': pdf_link,
-            'supp_link': supp_link,
-            'bibtex': bibtex_info
-        })
-    return papers
-
-def save_to_excel(papers, save_path):
-    df = pd.DataFrame(papers)
-    counter = 1
-    old_save_path = save_path
-    while osp.exists(save_path):
-        save_path = f"{old_save_path.rstrip('.xlsx')}_{counter}.xlsx"
-        counter += 1
-    df.to_excel(save_path, index=False)
-
-def download_file(url, file_path):
-    urlretrieve(url, file_path)
-
-def save_markdown_to_file(md_content, md_file_path):
-    # Save Markdown content to a file
-    with open(md_file_path, 'w', encoding='utf-8') as f:
-        f.write(md_content)
-
-# Function to toggle the layout
-def toggle_layout():
-    if st.session_state.layout == 'Layout 1':
-        st.session_state.layout = 'Layout 2'
-        if 'papers' in st.session_state:
-            del st.session_state.papers
-    else:
-        st.session_state.layout = 'Layout 1'
-        if 'llm' in st.session_state:
-            del st.session_state.llm
-        if 'messages' in st.session_state:
-            del st.session_state.messages
-        if 'chat_history' in st.session_state:
-            del st.session_state.chat_history
+from lib.utils import embed_multi_file, scrape_data, save_markdown_to_file, save_to_excel, download_file
+from prompt import retrieval_qa_chat_prompt, question_dictionary
 
 # Initialize session state to track layout
 if 'layout' not in st.session_state:
@@ -110,9 +40,6 @@ if st.session_state.layout == 'Layout 1':
     else:
         st.session_state.running = False
 
-    # Button to switch layouts
-    st.button("Chat", on_click=toggle_layout, disabled=st.session_state.running)
-
     st.title("Conference Paper Scraper")
 
     conference = st.selectbox("Conference", ["CVPR", "ICCV", "WACV"], disabled=st.session_state.running)
@@ -130,6 +57,17 @@ if st.session_state.layout == 'Layout 1':
     save_pdfs_button = st.sidebar.button("Save PDFs", disabled=st.session_state.running, key='run_pdf_button')
     save_supps_button = st.sidebar.button("Save Supps", disabled=st.session_state.running, key='run_supp_button')
     summary_button = st.sidebar.button("Summary", disabled=st.session_state.running, key='run_summary_button')
+    model = st.sidebar.selectbox("Model", ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"], disabled=st.session_state.running)
+    if "gpt" in model:
+        openai_api_key = st.sidebar.text_input("OpenAI API Key", disabled=st.session_state.running, type="password")
+    else:
+        openai_api_key = None
+    w_supp = st.sidebar.checkbox("Include supplementary materials for summary", value=False, disabled=st.session_state.running)
+    
+    if w_supp:
+        st.session_state["w_supp"] = True
+    else:
+        st.session_state["w_supp"] = False
 
     if scrape_button:
         if query.strip():  # Check if query is not empty
@@ -146,20 +84,34 @@ if st.session_state.layout == 'Layout 1':
         st.write("Query cannot be empty!")
         del st.session_state["none_query"]
 
+    if 'summarized' in st.session_state:
+        st.write("Summarization completed!")
+        del st.session_state["summarized"]
+        
     if summary_button:
+        st.session_state['summarized'] = True
         if query.strip():
             base_path = osp.join('material', conference, str(year), query)
             
-            llm = ChatOllama(model="llama3", temperature=0)
-            paper_list = os.listdir(base_path)
+            llm = ChatOpenAI(openai_api_key=openai_api_key, model_name=model)
+            paper_list = [elem for elem in os.listdir(base_path) if osp.isdir(osp.join(base_path, elem))]
             
             with st.spinner():
                 status_placeholder = st.empty()
                 for paper_idx, paper in enumerate(paper_list):
                     st.session_state["chat_history"] = []
                     
-                    with open(osp.join(base_path, paper, f"{paper}.pdf"), "rb") as file:
-                        retriever, _, _ = embed_file(file)
+                    if st.session_state["w_supp"]:
+                        files_list = [
+                                osp.join(base_path, paper, f"{paper}.pdf"), 
+                                osp.join(base_path, paper, f"{paper}_supp.pdf"), 
+                        ]
+                        supp_folder = osp.join(base_path, paper, f"{paper}_supp")
+                        if osp.exists(supp_folder):
+                            files_list += [file for file in os.listdir(supp_folder) if file.endswith(".pdf")]
+                        retriever = embed_multi_file(files_list, openai_api_key=openai_api_key)
+                    else:
+                        retriever = embed_multi_file([osp.join(base_path, paper, f"{paper}.pdf")], openai_api_key=openai_api_key)
 
                     rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
                     history_aware_retriever = create_history_aware_retriever(
@@ -185,8 +137,10 @@ if st.session_state.layout == 'Layout 1':
                             
                         final_output = llm.invoke(f"Make it markdown: {st.session_state['summary']}")
                         base_name = f"summary_{l_subject.replace(' ', '_')}"
-                        save_markdown_to_file(final_output.content, osp.join(base_path, paper, f"{base_name}.md"))
-                        os.system(f'pandoc -s {osp.join(base_path, paper, f"{base_name}.md")} -o {osp.join(base_path, paper, f"{base_name}.docx")}')
+                        save_folder = osp.join(base_path, paper, model)
+                        os.makedirs(save_folder, exist_ok=True)
+                        save_markdown_to_file(final_output.content, osp.join(save_folder, f"{base_name}.md"))
+                        os.system(f'pandoc -s {osp.join(save_folder, f"{base_name}.md")} -o {osp.join(save_folder, f"{base_name}.docx")}')
                         
                         status_text = f"Summarizing: Question ({l_subject_idx+1}/{len(question_dictionary)}), Paper ({paper_idx+1}/{len(paper_list)})"
                         status_placeholder.text(status_text)

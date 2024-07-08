@@ -5,13 +5,13 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from urllib.request import urlretrieve
 import zipfile
-import tempfile
 
 import streamlit as st
 from langchain.embeddings import CacheBackedEmbeddings, OpenAIEmbeddings
 from langchain.storage import LocalFileStore
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores.faiss import FAISS
 
 def extract_link(container, link_text, attribute='href'):
@@ -90,16 +90,52 @@ def print_messages():
         for chat_message in st.session_state["messages"]:
             st.chat_message(chat_message.role).write(chat_message.content)
 
+@st.cache_resource(show_spinner="Embedding file...")
+def embed_file(file):
+    file_content = file.read()
+    file_path = f"./.cache/files/{file.name}"
+    os.makedirs(osp.dirname(file_path), exist_ok=True)
+    with open(file_path, "wb") as f:
+        f.write(file_content)
+
+    cache_dir = LocalFileStore(f"./.cache/embeddings/{file.name}")
+
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=50,
+    )
+    loader = PyMuPDFLoader(file_path, extract_images=True)
+    docs = loader.load()
+    split_documents = text_splitter.split_documents(docs)
+
+    model_name = "BAAI/bge-m3"
+    model_kwargs = {"device": "cuda"}
+    encode_kwargs = {"normalize_embeddings": True}
+    embeddings = HuggingFaceEmbeddings(
+        model_name=model_name,
+        model_kwargs=model_kwargs,
+        encode_kwargs=encode_kwargs,
+    )
+    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
+
+    faiss_vectorstore = FAISS.from_documents(split_documents, embedding=cached_embeddings)
+    faiss_retriever = faiss_vectorstore.as_retriever()
+    return faiss_retriever, len(docs), len(split_documents)
+
 def embed_multi_file(files, openai_api_key=None):
     documents = []
-    temp_dir = tempfile.TemporaryDirectory()
+    
     for file in files:
         if not osp.exists(file):
             continue
         with open(file, "rb") as f:
             file_content = f.read()
-            file_path = osp.join(temp_dir, f.name)
-
+            file_path = f"./.cache/files/{f.name}"
+            if len(files) == 1:
+                store_name = f"./.cache/embeddings/{f.name}"
+            elif len(files) >= 2:
+                store_name = f"./.cache/embeddings/{f.name}_w_supp"
+        os.makedirs(osp.dirname(file_path), exist_ok=True)
         with open(file_path, "wb") as f:
             f.write(file_content)
         loader = PyMuPDFLoader(file_path, extract_images=True)
@@ -111,9 +147,23 @@ def embed_multi_file(files, openai_api_key=None):
     )
     split_documents = text_splitter.split_documents(documents)
 
-    embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
-   
-    faiss_vectorstore = FAISS.from_documents(split_documents, embedding=embeddings)
+    if openai_api_key is not None:
+        embeddings = OpenAIEmbeddings(openai_api_key=openai_api_key)
+        store_name = osp.join(store_name, "openai")
+    else:
+        model_name = "BAAI/bge-m3"
+        model_kwargs = {"device": "cuda"}
+        encode_kwargs = {"normalize_embeddings": True}
+        embeddings = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs,
+        )
+        store_name = osp.join(store_name, "bge")
+    cache_dir = LocalFileStore(store_name)
+    cached_embeddings = CacheBackedEmbeddings.from_bytes_store(embeddings, cache_dir)
+
+    faiss_vectorstore = FAISS.from_documents(split_documents, embedding=cached_embeddings)
     faiss_retriever = faiss_vectorstore.as_retriever()
     return faiss_retriever
 
