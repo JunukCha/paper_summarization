@@ -1,3 +1,4 @@
 langchain
 openai
 pypdf
+langchain_openai
