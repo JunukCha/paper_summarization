@@ -7,3 +7,4 @@ openai
 pypdf
 langchain_openai
 beautifulsoup4
+streamlit
