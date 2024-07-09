@@ -84,72 +84,81 @@ if st.session_state.layout == 'Layout 1':
     if 'none_query' in st.session_state:
         st.write("Query cannot be empty!")
         del st.session_state["none_query"]
+    
+    if 'none_folder' in st.session_state:
+        st.write(f"No such file or directory: {st.session_state['base_path']}")
+        del st.session_state["none_folder"]
+        del st.session_state["base_path"]
 
     if 'summarized' in st.session_state:
         st.write("Summarization completed!")
         del st.session_state["summarized"]
         
     if summary_button:
-        st.session_state['summarized'] = True
         if query.strip():
             base_path = osp.join('material', conference, str(year), query)
-            
-            if model == "Llama3":
-                llm = ChatOllama(model="llama3", temperature=0)
-            elif "gpt" in model:
-                llm = ChatOpenAI(openai_api_key=openai_api_key, model_name=model)
-            paper_list = [elem for elem in os.listdir(base_path) if osp.isdir(osp.join(base_path, elem))]
-            
-            with st.spinner():
-                status_placeholder = st.empty()
-                for paper_idx, paper in enumerate(paper_list):
-                    st.session_state["chat_history"] = []
-                    
-                    if st.session_state["w_supp"]:
-                        files_list = [
-                                osp.join(base_path, paper, f"{paper}.pdf"), 
-                                osp.join(base_path, paper, f"{paper}_supp.pdf"), 
-                        ]
-                        supp_folder = osp.join(base_path, paper, f"{paper}_supp")
-                        if osp.exists(supp_folder):
-                            files_list += [osp.join(supp_folder, file) for file in os.listdir(supp_folder) if file.endswith(".pdf")]
-                        retriever = embed_multi_file(files_list, openai_api_key=openai_api_key)
-                    else:
-                        retriever = embed_multi_file([osp.join(base_path, paper, f"{paper}.pdf")], openai_api_key=openai_api_key)
-
-                    rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
-                    history_aware_retriever = create_history_aware_retriever(
-                        llm=llm, retriever=retriever, prompt=rephrase_prompt
-                    )
-                    combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)
-
-                    qa = create_retrieval_chain(
-                        retriever=history_aware_retriever, combine_docs_chain=combine_docs_chain
-                    )
-
-                    status_text = f"Summarizing: Question (0/{len(question_dictionary)}), Paper (1/{len(paper_list)})"
-                    status_placeholder.text(status_text)
-                    for l_subject_idx, (l_subject, m_subject_dict) in enumerate(question_dictionary.items()):
-                        st.session_state["summary"] = []
+            if osp.exists(base_path):
+                if model == "Llama3":
+                    llm = ChatOllama(model="llama3", temperature=0)
+                elif "gpt" in model:
+                    llm = ChatOpenAI(openai_api_key=openai_api_key, model_name=model)
+                paper_list = [elem for elem in os.listdir(base_path) if osp.isdir(osp.join(base_path, elem))]
+                
+                with st.spinner():
+                    status_placeholder = st.empty()
+                    for paper_idx, paper in enumerate(paper_list):
+                        st.session_state["chat_history"] = []
                         
-                        for m_subject, question in m_subject_dict.items():
-                            output = qa.invoke(input={"input": question, "chat_history": st.session_state["chat_history"]})
-                            st.session_state["chat_history"].append(("human", question))
-                            st.session_state["chat_history"].append(("ai", output["answer"]))
-                            st.session_state["summary"].append(("human", question))
-                            st.session_state["summary"].append(("ai", output["answer"]))
-                            
-                        final_output = llm.invoke(f"Make it markdown: {st.session_state['summary']}")
-                        base_name = f"summary_{l_subject.replace(' ', '_')}"
-                        save_folder = osp.join(base_path, paper, model)
-                        os.makedirs(save_folder, exist_ok=True)
-                        save_markdown_to_file(final_output.content, osp.join(save_folder, f"{base_name}.md"))
-                        os.system(f'pandoc -s {osp.join(save_folder, f"{base_name}.md")} -o {osp.join(save_folder, f"{base_name}.docx")}')
-                        
-                        status_text = f"Summarizing: Question ({l_subject_idx+1}/{len(question_dictionary)}), Paper ({paper_idx+1}/{len(paper_list)})"
+                        if st.session_state["w_supp"]:
+                            files_list = [
+                                    osp.join(base_path, paper, f"{paper}.pdf"), 
+                                    osp.join(base_path, paper, f"{paper}_supp.pdf"), 
+                            ]
+                            supp_folder = osp.join(base_path, paper, f"{paper}_supp")
+                            if osp.exists(supp_folder):
+                                files_list += [osp.join(supp_folder, file) for file in os.listdir(supp_folder) if file.endswith(".pdf")]
+                            retriever = embed_multi_file(files_list, openai_api_key=openai_api_key)
+                        else:
+                            retriever = embed_multi_file([osp.join(base_path, paper, f"{paper}.pdf")], openai_api_key=openai_api_key)
+
+                        rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
+                        history_aware_retriever = create_history_aware_retriever(
+                            llm=llm, retriever=retriever, prompt=rephrase_prompt
+                        )
+                        combine_docs_chain = create_stuff_documents_chain(llm, retrieval_qa_chat_prompt)
+
+                        qa = create_retrieval_chain(
+                            retriever=history_aware_retriever, combine_docs_chain=combine_docs_chain
+                        )
+
+                        status_text = f"Summarizing: Question (0/{len(question_dictionary)}), Paper (1/{len(paper_list)})"
                         status_placeholder.text(status_text)
-
-                st.rerun() # Refresh the app to apply the enabled state
+                        for l_subject_idx, (l_subject, m_subject_dict) in enumerate(question_dictionary.items()):
+                            st.session_state["summary"] = []
+                            
+                            for m_subject, question in m_subject_dict.items():
+                                output = qa.invoke(input={"input": question, "chat_history": st.session_state["chat_history"]})
+                                st.session_state["chat_history"].append(("human", question))
+                                st.session_state["chat_history"].append(("ai", output["answer"]))
+                                st.session_state["summary"].append(("human", question))
+                                st.session_state["summary"].append(("ai", output["answer"]))
+                                
+                            final_output = llm.invoke(f"Make it markdown: {st.session_state['summary']}")
+                            base_name = f"summary_{l_subject.replace(' ', '_')}"
+                            save_folder = osp.join(base_path, paper, model)
+                            os.makedirs(save_folder, exist_ok=True)
+                            save_markdown_to_file(final_output.content, osp.join(save_folder, f"{base_name}.md"))
+                            os.system(f'pandoc -s {osp.join(save_folder, f"{base_name}.md")} -o {osp.join(save_folder, f"{base_name}.docx")}')
+                            
+                            status_text = f"Summarizing: Question ({l_subject_idx+1}/{len(question_dictionary)}), Paper ({paper_idx+1}/{len(paper_list)})"
+                            status_placeholder.text(status_text)
+                    
+                    st.session_state['summarized'] = True
+                    st.rerun() # Refresh the app to apply the enabled state
+            elif not osp.exists(base_path):
+                st.session_state['none_folder'] = True
+                st.session_state['base_path'] = base_path
+                st.rerun() # Refresh the app to apply the enabled state 
         else:
             st.session_state['none_query'] = True
             st.rerun()
