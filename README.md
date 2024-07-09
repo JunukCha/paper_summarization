@@ -54,5 +54,10 @@ Please refer to [ChatOllama](https://python.langchain.com/v0.2/docs/integrations
 ## Run
 `source scripts/run.sh`
 
+## Folder
+The Excel, PDF, supplement data and summary files will be created in `material/{conference_name}/{year}/{query}/...`.
+
+Please note that you should regularly empty the `.cache` folder.
+
 ## Question Prompts
 You can change the question prompts in prompt.py. I borrowed them from [Yunseong](https://github.com/yunseongcho/chatgpt_paper_review).
