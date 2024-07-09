@@ -1,6 +1,9 @@
 # paper_summarization 🦜️🔗
 This work for paper summarization.
 
+![image](https://github.com/JunukCha/paper_summarization/assets/92254092/9af41311-7a62-43dc-b045-f545ddb7f825)
+
+
 LLM model:
 - Llama 3 🦙
 - GPT-4o
