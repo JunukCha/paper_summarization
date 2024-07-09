@@ -4,6 +4,7 @@ import mimetypes
 import threading
 import streamlit as st
 from langchain import hub
+from langchain_community.chat_models import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain.chains.history_aware_retriever import create_history_aware_retriever
@@ -57,7 +58,7 @@ if st.session_state.layout == 'Layout 1':
     save_pdfs_button = st.sidebar.button("Save PDFs", disabled=st.session_state.running, key='run_pdf_button')
     save_supps_button = st.sidebar.button("Save Supps", disabled=st.session_state.running, key='run_supp_button')
     summary_button = st.sidebar.button("Summary", disabled=st.session_state.running, key='run_summary_button')
-    model = st.sidebar.selectbox("Model", ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"], disabled=st.session_state.running)
+    model = st.sidebar.selectbox("Model", ["Llama3", "gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"], disabled=st.session_state.running)
     if "gpt" in model:
         openai_api_key = st.sidebar.text_input("OpenAI API Key", disabled=st.session_state.running, type="password")
     else:
@@ -93,7 +94,10 @@ if st.session_state.layout == 'Layout 1':
         if query.strip():
             base_path = osp.join('material', conference, str(year), query)
             
-            llm = ChatOpenAI(openai_api_key=openai_api_key, model_name=model)
+            if model == "Llama3":
+                llm = ChatOllama(model="llama3", temperature=0)
+            elif "gpt" in model:
+                llm = ChatOpenAI(openai_api_key=openai_api_key, model_name=model)
             paper_list = [elem for elem in os.listdir(base_path) if osp.isdir(osp.join(base_path, elem))]
             
             with st.spinner():
@@ -108,7 +112,7 @@ if st.session_state.layout == 'Layout 1':
                         ]
                         supp_folder = osp.join(base_path, paper, f"{paper}_supp")
                         if osp.exists(supp_folder):
-                            files_list += [file for file in os.listdir(supp_folder) if file.endswith(".pdf")]
+                            files_list += [osp.join(supp_folder, file) for file in os.listdir(supp_folder) if file.endswith(".pdf")]
                         retriever = embed_multi_file(files_list, openai_api_key=openai_api_key)
                     else:
                         retriever = embed_multi_file([osp.join(base_path, paper, f"{paper}.pdf")], openai_api_key=openai_api_key)

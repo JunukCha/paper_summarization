@@ -1,11 +1,4 @@
-conda create -n lang-chain python=3.10
-conda activate lang-chain
+conda create -n paper_summary python=3.10 -y
+conda activate paper_summary
 
-pip install langchain
-pip install langchain_community
-pip install langchainhub
-pip install streamlit
-pip install unstructured
-pip install unstructured[pdf]
-pip install FlagEmbedding
-pip install python-dotenv
+pip install -r requirements.txt
