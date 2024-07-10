@@ -21,7 +21,7 @@ Click the 'Scrape Data' button on the left side. Then, the paper list will be ge
 
 ![image](https://github.com/JunukCha/paper_summarization/assets/92254092/b8461c72-637a-49d6-9c56-1b6ae3f85d50)
 
-### 2. Save to Excel
+### 2. Save to Excel 
 Click the 'Save to Excel' button to download the dataframe of the paper list as an Excel file.
    
 ### 3. Save PDFs
@@ -42,7 +42,7 @@ Click the 'Summary' button to generate a markdown file and a Word file (docx) in
 `source scripts/install.sh`
 Recommendation: Python 3.10, Rtx 4090, Cuda 12.2
 
-## Download LLama3
+## Download LLama3 🦙
 ```
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull llama3
@@ -50,13 +50,13 @@ ollama pull llama3
 
 Please refer to [ChatOllama](https://python.langchain.com/v0.2/docs/integrations/chat/ollama/) for more details.
 
-## Run
+## Run 
 `source scripts/run.sh`
 
-## Folder
+## Save Folder 📁
 The Excel, PDF, supplement data and summary files will be created in `material/{conference_name}/{year}/{query}/...`.
 
 Please note that you should regularly empty the `.cache` folder.
 
-## Question Prompts
+## Question Prompts ❓
 You can change the question prompts in `prompt.py`. I borrowed them from [Yunseong](https://github.com/yunseongcho/chatgpt_paper_review).
