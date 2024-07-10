@@ -1,5 +1,5 @@
 # paper_summarization 🦜️🔗
-This work for paper summarization.
+This work for paper summarization. Built on [Streamlit](https://streamlit.io/).
 
 ![image](https://github.com/JunukCha/paper_summarization/assets/92254092/9af41311-7a62-43dc-b045-f545ddb7f825)
 
