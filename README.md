@@ -23,6 +23,8 @@ Click the 'Scrape Data' button on the left side. Then, the paper list will be ge
 
 ### 2. Save to Excel 
 Click the 'Save to Excel' button to download the dataframe of the paper list as an Excel file.
+
+The columns of the DataFrame are: Title, Authors, PDF link, Supp link, and Bibtex.
    
 ### 3. Save PDFs
 Click the 'Save PDFs' button to download the PDF files of the papers in each folder.
