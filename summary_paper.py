@@ -72,21 +72,10 @@ if st.session_state.layout == 'Layout 1':
 
     if scrape_button:
         if query.strip():  # Check if query is not empty
-            prev_papers = None
             base_url = f"https://openaccess.thecvf.com/{conference}{year}"
-            words = [word for word in query.replace('_', ' ').replace('-', ' ').split()]
-            for word in words:
-                full_url = f"{base_url}?query={word}"
-                papers = scrape_data(full_url)
-                if prev_papers is None:
-                    prev_papers = papers
-                else:
-                    prev_papers_set = {tuple(paper.items()) for paper in prev_papers}
-                    current_papers_set = {tuple(paper.items()) for paper in papers}
-                    common_papers_set = prev_papers_set & current_papers_set
-                    prev_papers = [dict(paper) for paper in common_papers_set]
-            filtered_papers = prev_papers if prev_papers is not None else []
-            st.session_state['papers'] = filtered_papers
+            full_url = f"{base_url}?query={query}"
+            papers = scrape_data(full_url)
+            st.session_state['papers'] = papers
             st.rerun()  # Refresh the app to apply the enabled state
         else:
             st.session_state['none_query'] = True
@@ -176,12 +165,11 @@ if st.session_state.layout == 'Layout 1':
             
     if 'papers' in st.session_state:
         base_path = osp.join('material', conference, str(year), query)
+        os.makedirs(base_path, exist_ok=True)
         
         papers = st.session_state['papers']
         st.write(f"Data scraped successfully! Number of papers: {len(papers)}")
-        df = pd.DataFrame(papers)
-        df.index = range(1, len(df) + 1)
-        st.dataframe(df, height=200)
+        st.dataframe(pd.DataFrame(papers), height=200)
         
         if "saved_excel" in st.session_state:
             st.write(f"Data saved to Excel successfully!")
@@ -194,7 +182,6 @@ if st.session_state.layout == 'Layout 1':
             del st.session_state["saved_supp"]
 
         if save_excel_button:
-            os.makedirs(base_path, exist_ok=True)
             save_path = osp.join(base_path, f"{conference}_{year}_{query}.xlsx")
             save_to_excel(st.session_state['papers'], save_path)
             st.session_state['saved_excel'] = True
