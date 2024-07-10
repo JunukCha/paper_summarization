@@ -1,1 +1,1 @@
-streamlit run summary_paper_v1.0.py
+streamlit run summary_paper.py
