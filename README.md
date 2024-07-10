@@ -31,6 +31,10 @@ Please refer to [ChatOllama](https://python.langchain.com/v0.2/docs/integrations
 
 Select the conference and year, and type your subject of interest (e.g., "hand").
 
+Conference: CVPR, WACV, ICCV
+
+Year: 2011~2024
+
 ![image](https://github.com/JunukCha/paper_summarization/assets/92254092/a0bd4d5c-cb84-46f1-9d40-4e7b867f9912)
 
 Click the 'Scrape Data' button on the left side. Then, the paper list will be generated.
