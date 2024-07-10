@@ -12,6 +12,7 @@ LLM model:
 
 ## Install 🔨
 `source scripts/install.sh`
+
 Recommendation: Python 3.10, Rtx 4090, Cuda 12.2
 
 ## Download LLama3 🦙
