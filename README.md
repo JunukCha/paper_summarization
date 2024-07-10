@@ -10,6 +10,21 @@ LLM model:
 - GPT-4-turbo
 - GPT-3.5-turbo
 
+## Install 🔨
+`source scripts/install.sh`
+Recommendation: Python 3.10, Rtx 4090, Cuda 12.2
+
+## Download LLama3 🦙
+```
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull llama3
+```
+
+Please refer to [ChatOllama](https://python.langchain.com/v0.2/docs/integrations/chat/ollama/) for more details.
+
+## Run 
+`source scripts/run.sh`
+
 ## How
 ### 1. Scrape Data
 
@@ -36,25 +51,9 @@ Click the 'Save Supps' button to download the supplementary data of the papers i
 Click the 'Summary' button to generate a markdown file and a Word file (docx) in each folder, containing the summary content.
 
 ### Additional
-1. If you use OPENAI's LLMs, then please type your API key.
+1. If you use OPENAI's LLMs, then please type your API key. [OPENAI API key](https://platform.openai.com/api-keys)
 2. You can add or remove the supplement PDF file for summary.
    
-
-## Install
-`source scripts/install.sh`
-Recommendation: Python 3.10, Rtx 4090, Cuda 12.2
-
-## Download LLama3 🦙
-```
-curl -fsSL https://ollama.com/install.sh | sh
-ollama pull llama3
-```
-
-Please refer to [ChatOllama](https://python.langchain.com/v0.2/docs/integrations/chat/ollama/) for more details.
-
-## Run 
-`source scripts/run.sh`
-
 ## Save Folder 📁
 The Excel, PDF, supplement data and summary files will be created in `material/{conference_name}/{year}/{query}/...`.
 
