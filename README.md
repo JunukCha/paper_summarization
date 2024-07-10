@@ -5,7 +5,7 @@ This work for paper summarization.
 
 
 LLM model:
-- Llama 3 🦙
+- Llama 3 🦙 (~9GB VRAM)
 - GPT-4o
 - GPT-4-turbo
 - GPT-3.5-turbo
@@ -42,6 +42,7 @@ Additional
 
 ## Install
 `source scripts/install.sh`
+Recommendation: Python 3.10, Rtx 4090, Cuda 12.2
 
 ## Download LLama3
 ```
@@ -60,4 +61,4 @@ The Excel, PDF, supplement data and summary files will be created in `material/{
 Please note that you should regularly empty the `.cache` folder.
 
 ## Question Prompts
-You can change the question prompts in prompt.py. I borrowed them from [Yunseong](https://github.com/yunseongcho/chatgpt_paper_review).
+You can change the question prompts in `prompt.py`. I borrowed them from [Yunseong](https://github.com/yunseongcho/chatgpt_paper_review).
