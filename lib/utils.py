@@ -35,8 +35,8 @@ def scrape_data(url):
         papers.append({
             'title': title,
             'authors': authors,
-            'pdf_link': pdf_link,
-            'supp_link': supp_link,
+            'pdf_link': "https://openaccess.thecvf.com" + pdf_link,
+            'supp_link': "https://openaccess.thecvf.com" + supp_link,
             'bibtex': bibtex_info
         })
     return papers

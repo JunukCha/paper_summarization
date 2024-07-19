@@ -224,7 +224,7 @@ if st.session_state.layout == 'Layout 1':
                     else:
                         ext = mimetypes.guess_extension(mimetypes.guess_type(url)[0])
                         file_path = osp.join(folder_path, f"{paper['title'].replace(' ', '_')}_supp{ext}")
-                    thread = threading.Thread(target=download_file, args=("https://openaccess.thecvf.com" + url, file_path))
+                    thread = threading.Thread(target=download_file, args=(url, file_path))
                     threads.append(thread)
                     thread.start()
             for t_idx, thread in enumerate(threads):
