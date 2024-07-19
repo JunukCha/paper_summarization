@@ -27,7 +27,7 @@ def scrape_data(url):
     for entry in soup.find_all('dt', class_='ptitle'):
         title = entry.text.strip()
         authors_dirty = entry.find_next_sibling('dd').text.strip()
-        authors = ', '.join(author.strip() for author in authors_dirty.split('\n') if author.strip())
+        authors = ' '.join(author.strip() for author in authors_dirty.split('\n') if author.strip())
         links_container = entry.find_next_sibling('dd').find_next_sibling('dd')
         pdf_link = extract_link(links_container, 'pdf')
         supp_link = extract_link(links_container, 'supp')
